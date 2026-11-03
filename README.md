@@ -108,6 +108,72 @@ Replace the constraints with that output, restore the constraint line, rebuild,
 and run the tests. No package installation on the host is needed. Base images
 track Python 3.13 and PostgreSQL 17 within Debian Bookworm for patch updates.
 
+## Security checks
+
+The `Security` GitHub Actions workflow runs on every pull request (all target
+branches), every push to `main`, and manual dispatch. It has three independent,
+failing checks:
+
+- **Python security (Bandit)** scans application Python code, including low
+  severity and low confidence findings.
+- **Python dependencies (pip-audit)** audits all pinned runtime and test packages
+  in `requirements-lock.txt`, including transitive dependencies. Any known
+  vulnerability or package lookup failure fails the check. Keep this complete
+  constraint inventory synchronized when changing dependencies. Application
+  packages are neither installed nor executed during the audit. A second audit
+  checks the installed security tools and their own transitive dependencies.
+- **Git history secrets (Gitleaks)** scans all fetched Git history, including
+  deleted files and earlier commits. Checkout fetches the complete history;
+  detected secret values are redacted in logs. No historical baseline or blanket
+  path exclusions suppress findings.
+
+Run the same checks locally in PowerShell or a POSIX shell, using only Docker:
+
+```sh
+docker compose -f compose.security.yaml run --build --rm --no-deps code
+docker compose -f compose.security.yaml run --build --rm --no-deps dependencies
+docker compose -f compose.security.yaml run --rm --no-deps secrets
+docker compose -f compose.security.yaml down
+```
+
+Run each command even if another fails to see all results. The secrets command
+checks committed history, so commit intended changes before the final scan;
+untracked and uncommitted files are not covered. It mounts the checkout read-only
+at runtime; `.git` and local working materials never enter Docker build contexts.
+The dedicated security image does not change runtime or test dependencies.
+Auditing needs internet access to the public advisory service; Bandit and Gitleaks
+scan locally once their images are available. Network failures must be resolved
+and the dependency check rerun, rather than treated as a clean audit.
+
+Actions use a read-only repository token, do not persist checkout credentials,
+and have bounded run times. Pull requests use `pull_request`, with no project
+secrets or privileged `pull_request_target` execution. Checkout is pinned to a
+commit; Python scanner versions and the Gitleaks image version are pinned.
+Dependabot checks Python packages, Actions, Dockerfiles, and Compose images weekly
+and proposes updates without automatically merging them. Review the constraints
+and run application tests with dependency updates.
+
+After this branch and its Docker bootstrap prerequisite reach `main`, configure
+a GitHub ruleset or branch protection for `main` to require the three named checks
+above before merging, and restrict bypasses/direct pushes as appropriate. The
+workflow reports failures; repository settings enforce merge blocking. These
+settings are not enabled by committing this file. The first hosted run remains
+to be verified after publication.
+
+If a real credential is detected, revoke or rotate it first. Removing it from the
+latest file does not remove exposure or clean historical findings. Coordinate
+any history cleanup separately; do not add an ignore rule for an active secret.
+The sample local database passwords are intentionally public development values,
+never production credentials. Any false-positive exception must be narrowly
+scoped, reviewed, and documented with a reason; no exceptions are configured.
+
+This minimum workflow detects common insecure Python patterns, known Python
+package vulnerabilities, and recognizable committed secrets. It does not replace
+manual review, detect every credential, or audit operating-system packages in
+container images. Tool references: [Bandit](https://bandit.readthedocs.io/),
+[pip-audit](https://github.com/pypa/pip-audit), and
+[Gitleaks](https://github.com/gitleaks/gitleaks).
+
 ## Health contract and next milestones
 
 `GET /health` returns HTTP 200 when a bounded PostgreSQL query succeeds, or HTTP

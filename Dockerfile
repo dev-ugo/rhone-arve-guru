@@ -8,6 +8,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 RUN groupadd --gid 10001 app && useradd --uid 10001 --gid app --create-home app
 
+FROM base AS security
+COPY requirements-security.txt ./
+RUN pip install -r requirements-security.txt
+COPY requirements-lock.txt ./
+COPY app ./app
+USER app
+
 FROM base AS runtime
 COPY requirements.txt requirements-lock.txt ./
 RUN pip install -r requirements.txt

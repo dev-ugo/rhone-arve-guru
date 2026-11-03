@@ -1,0 +1,33 @@
+name: rhone-arve-guru-security
+
+x-python-security: &python-security
+  build:
+    context: .
+    target: security
+  init: true
+
+services:
+  code:
+    <<: *python-security
+    command: [bandit, --recursive, app, --severity-level, low, --confidence-level, low]
+
+  dependencies:
+    <<: *python-security
+    command:
+      - sh
+      - -c
+      - >-
+        pip-audit --requirement requirements-lock.txt --no-deps --disable-pip
+        --strict --progress-spinner off --timeout 15 &&
+        pip-audit --strict --progress-spinner off --timeout 15
+
+  secrets:
+    image: ghcr.io/gitleaks/gitleaks:v8.30.1
+    working_dir: /repo
+    volumes:
+      - .:/repo:ro
+    environment:
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: /repo
+    command: [git, --redact, --no-banner, --log-opts=--all, --timeout=300, /repo]
