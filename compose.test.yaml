@@ -1,0 +1,31 @@
+name: rhone-arve-guru-tests
+
+services:
+  test-db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: rhone_arve_test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test-only
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U test -d rhone_arve_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  tests:
+    build:
+      context: .
+      target: test
+    environment:
+      PGHOST: test-db
+      PGPORT: "5432"
+      PGDATABASE: rhone_arve_test
+      PGUSER: test
+      PGPASSWORD: test-only
+    depends_on:
+      test-db:
+        condition: service_healthy
+    init: true
