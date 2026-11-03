@@ -38,6 +38,14 @@ Keep personal specifications, financial planning, and one-off API investigation 
 - Document actual commands as tooling is added. Do not report nonexistent commands or tests as executed.
 - Keep secrets out of the repository. Provide required settings in an example configuration without sensitive values. Document migrations and startup commands when those components are added.
 
+## Container-only development
+
+- Docker Engine with Docker Compose v2 is the only required local runtime. Do not require a local Python, PostgreSQL, Node.js, package manager, or virtual environment.
+- Keep `docker compose up --build` sufficient to start the implemented application from a fresh checkout. Provide working local defaults; `.env` customization must remain optional.
+- Run application checks and tests inside Docker. Keep the Makefile an optional convenience and document equivalent Docker Compose commands, including commands usable from PowerShell.
+- Keep tests isolated from the development database and independent of public API availability. Preserve database volumes during routine shutdown.
+- Keep local planning notes, investigation captures, credentials, and `.git` out of Docker build contexts as well as commits.
+
 ## Data and ingestion
 
 - Primary source: `https://api.existenz.ch/apiv1/hydro`. Include `app=rhone-arve-guru` and the application version in requests.

@@ -1,0 +1,11 @@
+# Only application inputs may enter the build context.
+*
+!Dockerfile
+!requirements*.txt
+!pyproject.toml
+!app/
+!app/**
+!tests/
+!tests/**
+**/__pycache__/
+**/*.pyc
