@@ -3,3 +3,9 @@ services:
     command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     volumes:
       - ./app:/app/app:ro
+  migrate:
+    volumes:
+      - ./app:/app/app:ro
+  worker:
+    volumes:
+      - ./app:/app/app:ro
