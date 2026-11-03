@@ -1,9 +1,9 @@
 # Rhône & Arve Guru
 
 A public dashboard project for the Rhône and Arve in Geneva. The current milestone
-provides the containerized development foundation: FastAPI, PostgreSQL, readiness
-checks, and isolated tests. Measurement ingestion, the history API, indices, and
-the dashboard are not implemented yet.
+provides scheduled ingestion of six measurement series, PostgreSQL storage with
+idempotent backfill, FastAPI health reporting, and isolated tests. The measurement
+API routes, indices, and dashboard are not implemented yet.
 
 ## Requirements
 
@@ -23,7 +23,9 @@ docker compose up --build -d --wait
 Open [API documentation](http://localhost:8000/docs), the
 [bootstrap endpoint](http://localhost:8000/), or [health](http://localhost:8000/health).
 Alternatively, `docker compose up --build` starts in the foreground with logs.
-PostgreSQL must become healthy before the API starts.
+PostgreSQL must become healthy and versioned migrations must complete before the
+API and worker start. The worker loads the last 24 hours immediately, then ingests
+every ten minutes. An unavailable public source does not prevent the API starting.
 
 ```sh
 docker compose ps
@@ -54,9 +56,9 @@ only when the volume is empty: changing `.env` does not change existing database
 credentials. Keep matching credentials or change them in PostgreSQL explicitly.
 Never commit `.env` or use the sample password on a public server.
 
-There is no measurement schema or migration yet. Versioned migrations will be
-introduced with persistence; startup currently initializes only PostgreSQL's
-database and user.
+Versioned SQL migrations run automatically through the one-shot `migrate` service,
+including on existing database volumes. See [ingestion and storage](docs/ingestion.md)
+for the schema, backfill policy, failure handling, and manual commands.
 
 ## Develop and verify
 
@@ -66,7 +68,10 @@ Enable automatic Python source reload without rebuilding for each edit:
 docker compose -f compose.yaml -f compose.dev.yaml up --build -d --wait
 ```
 
-Source files are mounted read-only. Changes to dependencies still need a rebuild.
+Source files are mounted read-only. The API reloads automatically; restart the
+worker after Python edits with `docker compose restart worker`. New migrations
+require `docker compose run --rm migrate`, then restart affected services. Changes
+to dependencies still need a rebuild.
 To return to the normal configuration, run the standard start command.
 
 Run lint, formatting checks, and tests inside a separate Compose project:
@@ -79,7 +84,9 @@ docker compose -f compose.test.yaml down
 The first command returns the test exit code. Run the second even after a failure
 to clean up test containers. Tests use real PostgreSQL in temporary memory storage
 and never connect to the development database or the public source API. They check
-readiness, connection failure, and recovery. No host ports are needed.
+readiness, per-series freshness, migrations, duplicate prevention, bounded HTTP
+requests, malformed or partial responses, backfill, and recovery after source or
+database outages. No host ports are needed.
 
 Validate all Compose configurations without starting containers:
 
@@ -177,14 +184,16 @@ container images. Tool references: [Bandit](https://bandit.readthedocs.io/),
 ## Health contract and next milestones
 
 `GET /health` returns HTTP 200 when a bounded PostgreSQL query succeeds, or HTTP
-503 when connectivity fails. `status` describes infrastructure readiness only.
-`worker: "not_implemented"` and `data: "unavailable"` explicitly prevent readiness
-from being interpreted as current measurement availability. No source health
-endpoint is used as a substitute for per-series freshness.
+503 when the database or ingestion schema is unavailable. `status` describes
+infrastructure readiness only. `worker` reports the latest cycle independently
+from `data`; `series` provides measurement timestamps, original source units, and
+fresh/stale/missing status for each of the six expected series. Data is fresh for
+30 minutes after measurement; this operational limit is not a safety threshold.
+No source health endpoint substitutes for per-series freshness. See the detailed
+[health contract](docs/ingestion.md#health).
 
-Next milestones are scheduled ingestion with idempotent storage and backfill,
-`/latest` and `/history`, per-series freshness and worker health, then the mobile
-dashboard. No current or contrast thresholds are calibrated. The MVP's 24-hour
+Next milestones are `/latest` and `/history`, then the mobile dashboard.
+No current or contrast thresholds are calibrated. The MVP's 24-hour
 worker observation and `/latest` latency target remain unverified.
 
 Measurements will originate from the [Federal Office for the Environment (FOEN)](https://www.hydrodaten.admin.ch/)

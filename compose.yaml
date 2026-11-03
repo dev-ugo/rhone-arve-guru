@@ -1,5 +1,17 @@
 name: rhone-arve-guru
 
+x-application: &application
+  build:
+    context: .
+    target: runtime
+  environment:
+    PGHOST: db
+    PGPORT: "5432"
+    PGDATABASE: ${POSTGRES_DB:-rhone_arve}
+    PGUSER: ${POSTGRES_USER:-rhone_arve}
+    PGPASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+  init: true
+
 services:
   db:
     image: postgres:17-bookworm
@@ -17,28 +29,45 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  migrate:
+    <<: *application
+    command: ["python", "-m", "app.migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   api:
-    build:
-      context: .
-      target: runtime
-    environment:
-      PGHOST: db
-      PGPORT: "5432"
-      PGDATABASE: ${POSTGRES_DB:-rhone_arve}
-      PGUSER: ${POSTGRES_USER:-rhone_arve}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+    <<: *application
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=8)"]
       interval: 10s
       timeout: 10s
       retries: 3
       start_period: 10s
-    init: true
+    restart: unless-stopped
+
+  worker:
+    <<: *application
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 3m
     restart: unless-stopped
 
 volumes:
