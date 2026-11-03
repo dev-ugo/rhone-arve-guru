@@ -67,6 +67,15 @@ Keep personal specifications, financial planning, and one-off API investigation 
 - Build a mobile-readable page with current values, a 24-hour chart, and explicit missing-data, stale-data, and error states.
 - Credit and link to FOEN, and reference Existenz. Do not assume non-commercial usage terms permit monetization.
 
+## Security
+
+- Treat every value from the Existenz API as untrusted input. Validate type, range, station, and parameter against an allowlist before insertion. Never render source values as HTML; use `textContent`, not `innerHTML`.
+- Never log secrets, full connection strings, or raw request bodies. Error responses must not expose stack traces, SQL, or internal hostnames. `/health` reports status only.
+- Keep the API read-only: no public endpoint writes to the database. Restrict CORS to the origins that need it; no wildcard once publicly deployed.
+- Containers run as non-root, without `privileged` mode or extra capabilities, with no published database port. Pin image versions.
+- Do not weaken the Security workflow: no `pull_request_target`, no write permissions, no ignore rules for an active secret. When dependencies change, keep `requirements-lock.txt` complete so the audit stays valid.
+- Before the final commit of any change touching API routes, Dockerfiles, Compose files, workflows, or deployment configuration, run the `security-engineer` subagent on the diff. Report its findings and how each was handled. The subagent never edits files.
+
 ## Indices and wording
 
 - Current and contrast thresholds are indicative, unofficial, and still need calibration. Do not invent thresholds or present provisional values as validated.
@@ -83,3 +92,4 @@ Keep personal specifications, financial planning, and one-off API investigation 
 - Automated tests must be reproducible and independent of public API availability. Reserve real network calls for explicit, bounded integration checks.
 - Before declaring the MVP complete, verify startup with `docker compose up`, measure the `/latest` response-time target of less than 100 ms, and observe the worker for 24 hours. Do not claim these criteria are met based on shorter tests or estimates.
 - A completed feature includes its implementation, useful documentation, relevant checks, and final commit on its dedicated branch. Report any criteria still awaiting verification.
+- For security-relevant changes, a completed feature includes the `security-engineer` review and its reported outcome.
