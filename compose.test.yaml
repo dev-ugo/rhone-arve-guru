@@ -2,7 +2,7 @@ name: rhone-arve-guru-tests
 
 services:
   test-db:
-    image: postgres:17-bookworm
+    image: postgres:18-bookworm
     environment:
       POSTGRES_DB: rhone_arve_test
       POSTGRES_USER: test
