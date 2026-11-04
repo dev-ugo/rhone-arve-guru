@@ -22,11 +22,11 @@ def get(path: str) -> httpx.Response:
     return asyncio.run(request())
 
 
-def test_bootstrap_links_to_api_documentation():
+def test_dashboard_links_to_api_documentation():
     response = get("/")
     assert response.status_code == 200
-    assert response.json()["stage"] == "api"
-    assert get(response.json()["docs"]).status_code == 200
+    assert 'href="/docs"' in response.text
+    assert get("/docs").status_code == 200
 
 
 def test_health_checks_real_postgresql():

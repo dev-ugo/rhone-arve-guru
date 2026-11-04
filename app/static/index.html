@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Les mesures du Rhône et de l’Arve à Genève : température, débit et évolution sur 24 heures. Données de l’OFEV relayées par Existenz."
+    />
+    <meta name="theme-color" content="#163d38" />
+    <title>Rhône & Arve Guru · Au fil de l’eau</title>
+    <link rel="icon" href="/static/river.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/dashboard.css" />
+    <script type="module" src="/static/dashboard.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Aller aux mesures</a>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Rhône et Arve Guru, accueil">
+        <img src="/static/river.svg" alt="" width="36" height="36" />
+        <span
+          >rhône <span class="brand-amp">&</span> arve
+          <strong>guru</strong></span
+        >
+      </a>
+      <a class="source-link" href="#sources"
+        >Données & sources <span aria-hidden="true">↗</span></a
+      >
+    </header>
+
+    <main id="content">
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">
+            <span class="location-mark" aria-hidden="true">+</span> GENÈVE,
+            SUISSE
+          </p>
+          <h1 id="page-title">Au fil de <em>l’eau.</em></h1>
+          <p class="intro-copy">
+            Deux rivières, six mesures. Un regard sur le Rhône et l’Arve,<br
+              class="desktop-break"
+            />
+            avant leur rencontre à la Jonction.
+          </p>
+        </div>
+        <div class="confluence" aria-hidden="true">
+          <svg viewBox="0 0 330 140" focusable="false">
+            <path
+              class="river-rhone"
+              d="M310 30 C245 30 210 95 160 90 S80 105 15 125"
+            />
+            <path class="river-arve" d="M310 122 C238 120 220 72 160 90" />
+            <circle cx="160" cy="90" r="5" />
+            <text x="246" y="18">RHÔNE</text>
+            <text x="253" y="108">ARVE</text>
+            <text class="map-label" x="105" y="65">La Jonction</text>
+          </svg>
+          <p>46°12′ N &nbsp; 6°07′ E</p>
+        </div>
+      </section>
+
+      <div class="status-bar" id="status-bar" data-state="loading">
+        <div
+          class="status-copy"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="overall-status">Chargement des mesures…</span>
+          <span id="updated-at" class="updated-at"></span>
+        </div>
+        <button id="refresh" class="refresh-button" type="button">
+          <span aria-hidden="true">↻</span> Actualiser
+        </button>
+      </div>
+
+      <noscript
+        ><p class="notice">
+          JavaScript est nécessaire pour charger les mesures et le graphique.
+          Les données restent accessibles dans <a href="/latest">l’API</a>.
+        </p></noscript
+      >
+
+      <section aria-labelledby="measurements-title">
+        <div class="section-heading">
+          <h2 id="measurements-title">Les rivières, maintenant</h2>
+          <p>Une date pour chaque mesure</p>
+        </div>
+        <div class="rivers-grid">
+          <article
+            class="river-panel rhone-panel"
+            aria-labelledby="rhone-title"
+          >
+            <div class="river-heading">
+              <div>
+                <p class="eyebrow">STATION 2606</p>
+                <h3 id="rhone-title">
+                  <span class="river-dot rhone-dot" aria-hidden="true"></span>Le
+                  Rhône
+                </h3>
+              </div>
+              <span class="station-type">Genève</span>
+            </div>
+            <div class="measurements-grid" id="rhone-measurements"></div>
+          </article>
+          <article class="river-panel arve-panel" aria-labelledby="arve-title">
+            <div class="river-heading">
+              <div>
+                <p class="eyebrow">STATION 2170</p>
+                <h3 id="arve-title">
+                  <span class="river-dot arve-dot" aria-hidden="true"></span
+                  >L’Arve
+                </h3>
+              </div>
+              <span class="station-type">Genève, Bout-du-Monde</span>
+            </div>
+            <div class="measurements-grid" id="arve-measurements"></div>
+          </article>
+        </div>
+        <p class="freshness-note">
+          Une mesure est dite récente pendant 30 minutes. Ce délai décrit la
+          fraîcheur des données, pas les conditions de baignade.
+        </p>
+      </section>
+
+      <section class="chart-panel" aria-labelledby="history-title">
+        <div class="chart-heading">
+          <div>
+            <p class="eyebrow">PRENDRE DU RECUL</p>
+            <h2 id="history-title">Les dernières 24 heures</h2>
+          </div>
+          <div class="series-control">
+            <label for="series-select">Série affichée</label
+            ><select id="series-select">
+              <optgroup label="Le Rhône">
+                <option value="2606:temperature">Rhône · Température</option>
+                <option value="2606:flow">Rhône · Débit</option>
+              </optgroup>
+              <optgroup label="L’Arve">
+                <option value="2170:temperature">Arve · Température</option>
+                <option value="2170:flow">Arve · Débit</option>
+                <option value="2170:height">Arve · Cote de l’eau</option>
+                <option value="2170:turbidity">Arve · Turbidité</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+        <p
+          id="chart-status"
+          class="chart-status"
+          role="status"
+          aria-live="polite"
+        >
+          Chargement de l’historique…
+        </p>
+        <div class="chart-container" id="chart-container" hidden>
+          <svg
+            id="history-chart"
+            viewBox="0 0 960 280"
+            role="img"
+            aria-labelledby="chart-title chart-description"
+          >
+            <title id="chart-title">Évolution sur 24 heures</title>
+            <desc id="chart-description"></desc>
+          </svg>
+        </div>
+        <div class="chart-footer">
+          <p>
+            <span class="line-key" aria-hidden="true"></span
+            ><span id="chart-legend">Rhône · Température</span>
+          </p>
+          <p>Heures de Genève · Europe/Zurich</p>
+        </div>
+        <p class="chart-note">
+          Les interruptions de plus de 30 minutes coupent la courbe. Les points
+          représentent les mesures reçues ; aucune valeur manquante n’est
+          remplacée par zéro.
+        </p>
+        <details id="history-details" hidden>
+          <summary>Consulter les mesures du graphique</summary>
+          <div class="table-scroll">
+            <table>
+              <caption id="history-caption">
+                Mesures sur 24 heures
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Date et heure à Genève</th>
+                  <th scope="col" id="history-unit">Valeur</th>
+                </tr>
+              </thead>
+              <tbody id="history-table"></tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+
+      <section class="indices-section" aria-labelledby="indices-title">
+        <div class="section-heading">
+          <h2 id="indices-title">Lire les conditions</h2>
+          <p>Indicateurs en cours de validation</p>
+        </div>
+        <div class="indices-grid">
+          <article class="index-card">
+            <span class="index-icon" aria-hidden="true">↝</span>
+            <div>
+              <h3>Courant du Rhône</h3>
+              <p class="index-state">Indice indisponible</p>
+              <p id="current-reason">
+                Les seuils de courant doivent encore être calibrés.
+              </p>
+            </div>
+          </article>
+          <article class="index-card">
+            <span class="index-icon contrast-icon" aria-hidden="true">◐</span>
+            <div>
+              <h3>Contraste à la Jonction</h3>
+              <p class="index-state">Indice indisponible</p>
+              <p id="jonction-reason">
+                Les unités BSTU/NTU et le lien avec le contraste visuel restent
+                à valider.
+              </p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <aside class="safety-notice" aria-label="Avertissement">
+        <span aria-hidden="true">ⓘ</span>
+        <p>
+          <strong>Observer ne suffit pas pour décider de se baigner.</strong>
+          Cette application ne remplace pas les consignes officielles. Elle ne
+          permet pas de déterminer si la baignade est autorisée ou sûre.
+        </p>
+      </aside>
+
+      <footer id="sources">
+        <div>
+          <a class="footer-brand" href="/">Rhône & Arve Guru</a>
+          <p>Un regard sur les eaux de Genève.</p>
+        </div>
+        <div class="source-details">
+          <p>
+            Mesures :
+            <a href="https://www.hydrodaten.admin.ch/"
+              >Office fédéral de l’environnement (OFEV)</a
+            ><br />Relayées par
+            <a href="https://api.existenz.ch/">Existenz</a> ·
+            <a href="/docs">Documentation API</a>
+          </p>
+          <p>
+            La cote est une altitude de surface, pas une profondeur.<br />La
+            turbidité reste exprimée en BSTU, l’unité déclarée par Existenz.
+          </p>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>

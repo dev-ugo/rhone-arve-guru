@@ -203,3 +203,86 @@ to Docker privileges, database identities, ingress, or dependency/workflow polic
 also require a fresh review of the affected boundaries. The current evidence
 supports the scoped local read API; it does not establish that the entire project
 is secure or ready for production.
+
+## Mobile dashboard assessment — 2026-11-04
+
+### Pre-implementation scope and design constraints
+
+This assessment was recorded before implementing the dashboard. It extends the
+existing API model rather than replacing its historical evidence. The planned
+feature serves a French, mobile-readable HTML page at `/`, with local CSS and
+JavaScript under `app/static`, through the existing FastAPI process. The page
+reads `/latest` and bounded `/history` requests for six confirmed series, shows
+their source units, measurement times and freshness, and draws a selectable
+24-hour SVG chart. It introduces no account, write route, public deployment,
+runtime dependency, external script, font, analytics service, or direct browser
+request to Existenz. Current and Jonction indices remain unavailable.
+
+The affected assets are browser execution integrity, availability of the existing
+read API, and accurate communication of observations and uncertainty. Existing
+database credentials and host isolation remain relevant but gain no new intended
+browser capability. Actors are public readers, a reachable malicious HTTP
+client, an upstream publisher able to influence stored values, and the trusted
+maintainer controlling static files. There is no new identity or tenant boundary.
+
+The added flow is `browser -> same-origin HTML/CSS/JS -> /latest or /history ->
+existing read-only database queries -> JSON -> DOM/SVG`. Browser DOM construction
+is a new trust boundary: a JSON value is data, never markup, an executable URL,
+or a script. The existing B2 upstream and B3 database boundaries still apply.
+Serving static files must expose only the dedicated asset directory, not the
+checkout, local planning notes, credentials, or database configuration.
+
+The following table was first recorded with planned mitigations and checks. It
+was updated after implementation on the same date to distinguish inspected
+controls, executed verification, and remaining work.
+
+| Asset / flow | Threat scenario and prerequisite | Existing controls | Likelihood / impact and priority | Implemented mitigation | Verification evidence | Residual risk / open assumption |
+| --- | --- | --- | --- | --- | --- | --- |
+| D1: JSON to DOM/SVG | A malformed or compromised response supplies markup or nonnumeric chart input | Adapter/API validation and six-series allowlist | Requires response influence; script execution or misleading output would be material. Required rendering constraint | DOM text nodes/`textContent`; SVG namespace with locally constructed attributes; allowlisted labels and units; finite numeric and chart-range checks; same-origin CSP without inline script or evaluation | M1 checks response headers; M2 rejects markup in numeric fields, unexpected units, unknown/duplicate series and numeric overflow; M4 inspects DOM sinks. No browser injection-execution test is claimed | CSP is defense in depth and does not establish source authenticity |
+| D2: latest values and chart interpretation | Old browser state, missing points, mismatched units, or an index placeholder is interpreted as current or safe | API freshness per series, explicit nulls and unavailable indices | Source gaps and outages are normal; misleading reassurance can have serious consequences. Required product constraint | Original units and individual dates; null remains absent and zero stays numeric; freshness recomputed from API time plus monotonic elapsed time; separate gap segments; indices unconditionally unavailable; explicit French warning | M2 covers missing/zero, tiny nonzero formatting, expiry/future dates, gaps and malicious index fields; M3 confirms empty/fresh/partial/stale synthetic states, six source units, zero BSTU, individual dates, chart gap, unavailable indices, cached-value behavior during database failure, initial failure and manual recovery | Thirty minutes remains operational, not a safety threshold; BSTU/NTU, visual contrast and calibration remain unresolved |
+| D3: browser refresh and history requests | Repeated interactions or late responses cause excessive requests or replace the selected series with older results | API window/row limits and bounded database operations | Normal interactions can trigger races; direct request floods remain possible. Bound the new client behavior | Eight-second abort timer; guarded 60-second latest refresh; abort and sequence checks for history; hidden-tab cancellation; one selected 24-hour series; failed/changed history clears its previous curve; explicit manual retry | M2 verifies selected-series identity and bounded ordered points; M4 inspects scheduling, cancellation and sequence checks. Slow-response, timeout and request-race behavior has not been exercised | Browser throttling is not a server rate limit; the one-million-character body check occurs after reading, so it is not a streaming memory cap. The existing fixed API response cap remains relevant; T4 remains open before Internet exposure |
+| D4: static serving and browser policy | An attacker requests paths outside the asset directory, embeds the dashboard, or induces external script loading | Narrow Docker build context, non-root application user, localhost publication | Reachable path requests are easy; disclosure or browser compromise would be material. Required serving constraint | Dedicated static mount; CSP, `nosniff`, framing denial, no referrer and no-store on dashboard/successful asset responses; existing Swagger behavior preserved | M1 checks served MIME types/headers, rejected traversal/repository paths, database failure and `/docs`; M4 inspects Docker copies and read-only dev mount. The optional Node model-test container has no network, a non-root user, read-only filesystem/mounts and dropped capabilities | No TLS, ingress hardening, public deployment or broader container audit is added. Browser policies do not uniformly cover API/docs or failed static requests |
+
+The same-origin design needs no added CORS access and no new service. A custom
+SVG chart avoids a CDN or chart-library supply chain; its numeric inputs and gap
+handling have focused model tests. Height is identified as water-surface
+elevation in the page's source explanation, and turbidity remains BSTU without
+an assumed NTU conversion. A graph gap criterion describes display continuity
+only, not evidence of a measured intermediate value or a hydrological safety
+threshold.
+
+### Verification inventory and remaining work
+
+The following executed results were reported by the implementing agent on
+2026-11-04; this documentation review inspected the implementation and tests but
+did not independently rerun their containers. Existing API evidence E1-E5 above
+remains historical and is not represented as a new scanner run.
+
+| Evidence | Result and reproducible source | What it establishes / limit |
+| --- | --- | --- |
+| M1: Python application and asset suite | 110 passing tests with isolated real PostgreSQL in Docker, plus passing Ruff lint and formatting. Command: `docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from tests`; dashboard additions are in [tests/test_dashboard.py](../tests/test_dashboard.py) | Adds HTTP asset/MIME/policy checks, protected static-file scope, database-independent HTML and docs compatibility to the existing suite. ASGI requests do not execute JavaScript |
+| M2: frontend model suite | 28 passing Node built-in tests in the final rerun. Command: `docker compose -f compose.frontend-test.yaml run --rm frontend-tests`; [test source](../tests/frontend/dashboard.test.mjs) | Validates pure data/freshness/segmentation/scaling behavior, tiny nonzero formatting and extreme tick calculations with no network or package installation; does not execute DOM code, timers, fetch races or browser layouts |
+| M3: local browser inspection | Isolated tmpfs PostgreSQL project without a worker or public source; empty/fresh data, source units, zero BSTU, independent dates, visible gap and unavailable indices observed. All six selector choices produced the correct title/unit; the table had 144 rows at observation and retained the final zero. No document horizontal overflow at 320, 375, 768 and 1280 px; responsive SVG viewBox was `0 0 290 230` at 375 px. Partial data showed four fresh, one stale and one missing series; all-stale data retained six stale cards and stale chart status. Pausing only the disposable database retained cached values/dates/stale states, displayed explicit refresh failure and hid the failed chart. First load during that outage served HTML with six em dashes and explicit unavailable values/history. After unpausing and reseeding fresh synthetic data, manual refresh recovered six fresh readings and a 138-point Rhône-temperature chart with two segments | Evidence for these states, interactions and widths; not an exhaustive accessibility or browser compatibility audit. The desktop screenshot was kept outside the repository; no public source was contacted |
+| M4: scoped implementation/configuration inspection | Reviewed [app/main.py](../app/main.py), `app/static`, [compose.frontend-test.yaml](../compose.frontend-test.yaml), dashboard tests and existing Docker/development mounts. Normal, development, test and frontend Compose configuration validation passed according to the implementing agent | Confirms intended code paths and container boundaries; code presence does not prove every runtime or timing behavior |
+| M5: scoped scanner reruns | Bandit reported zero findings in Docker for the final implementation. `docker compose -f compose.security.yaml run --build --rm --no-deps dependencies` completed successfully; pip-audit reported no known vulnerabilities for both the locked application/test packages and the installed security tools' dependencies | Results cover Bandit's Python rules and pip-audit's packages/advisory state at execution. Gitleaks runs against committed history after the feature commit, with its result reported in the feature handoff; no new JavaScript scanner or operating-system image audit is claimed |
+| M6: independent security review | The read-only reviewer identified one low-severity extreme tick-overflow issue. The implementation corrected it and added regression coverage; the reviewer inspected the correction and reported zero open critical/high/medium/low findings and acceptance for the examined local scope | Independent code review, not a production security guarantee. The reviewer did not independently rerun the tests |
+
+### Confirmed correction: extreme chart tick overflow
+
+The initial chart derived axis ticks with `span * index / 4`. A finite accepted
+range could overflow at the multiplication before division, producing infinite
+ticks and coordinates. The corrected [chart model](../app/static/dashboard-model.mjs)
+uses `span * fraction` with fractions from zero through one. Regression tests
+cover `[0, 1e308]` and `[-1e308, 0]`, requiring every tick and normalized position
+to remain finite. This low-severity rendering defect was corrected before the
+feature commit; no script execution, stored-data corruption or process compromise
+was demonstrated.
+
+The dashboard checks recorded above are complete for the requested local scope.
+Slow-response races, timeouts and hidden-tab transitions have code-level controls
+but no executed timing/visibility automation recorded here. Browser inspection
+does not constitute a full accessibility or cross-browser audit.
+The MVP's continuous 24-hour worker observation remains a separate unfulfilled
+criterion; neither the synthetic browser checks nor the existing local latency
+sample satisfies it. Public ingress capacity, TLS and database-role isolation
+remain the earlier deployment follow-up; this dashboard does not resolve them.
