@@ -1,10 +1,10 @@
 # Rhône & Arve Guru
 
 A public dashboard project for the Rhône and Arve in Geneva. The current milestone
-provides scheduled ingestion of six measurement series, PostgreSQL storage with
-idempotent backfill, read-only measurement and health APIs, and isolated tests.
+provides a French-language mobile dashboard, scheduled ingestion of six measurement
+series, PostgreSQL storage with idempotent backfill, read-only measurement and
+health APIs, and isolated tests.
 Current and Jonction indices remain unavailable pending validation and calibration.
-The mobile dashboard is the next milestone.
 
 ## Requirements
 
@@ -21,7 +21,7 @@ From the repository root, in PowerShell or a POSIX shell:
 docker compose up --build -d --wait
 ```
 
-Open [API documentation](http://localhost:8000/docs), the
+Open the [dashboard](http://localhost:8000/), [API documentation](http://localhost:8000/docs), the
 [latest measurements](http://localhost:8000/latest), or [health](http://localhost:8000/health).
 Alternatively, `docker compose up --build` starts in the foreground with logs.
 PostgreSQL must become healthy and versioned migrations must complete before the
@@ -97,12 +97,26 @@ Validate all Compose configurations without starting containers:
 docker compose config --quiet
 docker compose -f compose.yaml -f compose.dev.yaml config --quiet
 docker compose -f compose.test.yaml config --quiet
+docker compose -f compose.frontend-test.yaml config --quiet
 ```
 
 If Make is already available, optional shortcuts are `make up`, `make dev`,
-`make down`, `make logs`, `make ps`, `make test`, and `make check`.
+`make down`, `make logs`, `make ps`, `make test`, `make test-frontend`, and `make check`.
 `make help` lists them. If tests fail, use `make test-down` after investigating.
 All commands above work without Make.
+
+Run the frontend model tests in a separate, network-isolated container:
+
+```sh
+docker compose -f compose.frontend-test.yaml run --rm frontend-tests
+```
+
+The first run downloads the pinned official Node image; no local Node, npm,
+package installation, or frontend build is required. The test container has no
+network, runs as a non-root user, and mounts only the static sources and frontend
+tests read-only. These tests check validation, zero versus missing values,
+freshness expiry, chart gaps, and finite chart ranges. Browser interaction and
+layout verification are separate; see the [dashboard guide](docs/dashboard.md).
 
 Direct dependencies are pinned in `requirements.txt` and `requirements-dev.txt`;
 shared transitive constraints live in `requirements-lock.txt`. When updating,
@@ -211,8 +225,10 @@ fresh/stale/missing status for each of the six expected series. Data is fresh fo
 No source health endpoint substitutes for per-series freshness. See the detailed
 [health contract](docs/ingestion.md#health).
 
-The next milestone is the mobile dashboard. No current or contrast thresholds
-are calibrated. The MVP's continuous 24-hour worker observation remains pending;
+The [dashboard](docs/dashboard.md) displays current readings and selectable
+24-hour history, with explicit missing, stale, loading, and request-error states.
+No current or contrast thresholds are calibrated. The MVP's continuous 24-hour
+worker observation remains pending;
 the API contract documents the scope of local response-time verification.
 
 Measurements will originate from the [Federal Office for the Environment (FOEN)](https://www.hydrodaten.admin.ch/)

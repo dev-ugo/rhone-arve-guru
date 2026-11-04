@@ -1,0 +1,15 @@
+name: rhone-arve-guru-frontend-tests
+
+services:
+  frontend-tests:
+    image: node:24.22.2-bookworm-slim
+    user: node
+    working_dir: /workspace
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - ./app/static:/workspace/app/static:ro
+      - ./tests/frontend:/workspace/tests/frontend:ro
+    command: [node, --test, tests/frontend/dashboard.test.mjs]
