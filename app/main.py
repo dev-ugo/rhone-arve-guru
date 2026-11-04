@@ -1,4 +1,4 @@
-"""API readiness with independent worker and measurement health signals."""
+"""Read-only measurement API and independent worker and data health signals."""
 
 from typing import Literal
 
@@ -8,8 +8,10 @@ from fastapi import FastAPI, Response
 from app import __version__
 from app.database import check_database
 from app.health import IngestionHealth, ingestion_health
+from app.measurements import router as measurements_router
 
 app = FastAPI(title="Rhône & Arve Guru", version=__version__)
+app.include_router(measurements_router)
 
 
 class Health(IngestionHealth):
@@ -20,7 +22,7 @@ class Health(IngestionHealth):
 
 @app.get("/")
 def index() -> dict[str, str]:
-    return {"name": app.title, "version": __version__, "stage": "ingestion", "docs": "/docs"}
+    return {"name": app.title, "version": __version__, "stage": "api", "docs": "/docs"}
 
 
 @app.get("/health", response_model=Health, responses={503: {"model": Health}})

@@ -2,8 +2,9 @@
 
 A public dashboard project for the Rhône and Arve in Geneva. The current milestone
 provides scheduled ingestion of six measurement series, PostgreSQL storage with
-idempotent backfill, FastAPI health reporting, and isolated tests. The measurement
-API routes, indices, and dashboard are not implemented yet.
+idempotent backfill, read-only measurement and health APIs, and isolated tests.
+Current and Jonction indices remain unavailable pending validation and calibration.
+The mobile dashboard is the next milestone.
 
 ## Requirements
 
@@ -21,7 +22,7 @@ docker compose up --build -d --wait
 ```
 
 Open [API documentation](http://localhost:8000/docs), the
-[bootstrap endpoint](http://localhost:8000/), or [health](http://localhost:8000/health).
+[latest measurements](http://localhost:8000/latest), or [health](http://localhost:8000/health).
 Alternatively, `docker compose up --build` starts in the foreground with logs.
 PostgreSQL must become healthy and versioned migrations must complete before the
 API and worker start. The worker loads the last 24 hours immediately, then ingests
@@ -86,7 +87,9 @@ to clean up test containers. Tests use real PostgreSQL in temporary memory stora
 and never connect to the development database or the public source API. They check
 readiness, per-series freshness, migrations, duplicate prevention, bounded HTTP
 requests, malformed or partial responses, backfill, and recovery after source or
-database outages. No host ports are needed.
+database outages. API tests also cover latest readings, bounded chronological
+history, timezone-aware input validation, empty results, read-only methods, and
+generic database failure responses. No host ports are needed.
 
 Validate all Compose configurations without starting containers:
 
@@ -181,7 +184,23 @@ container images. Tool references: [Bandit](https://bandit.readthedocs.io/),
 [pip-audit](https://github.com/pypa/pip-audit), and
 [Gitleaks](https://github.com/gitleaks/gitleaks).
 
-## Health contract and next milestones
+The [measurement API threat model](docs/threat-model.md) records the assets,
+actors, trust boundaries, verified controls, and remaining risks for the local
+Compose setup. Review its deployment assumptions before exposing the API publicly.
+
+## Measurement and health APIs
+
+`GET /latest` returns all six expected series with their latest value, UTC
+measurement timestamp, original source unit, and individual freshness. Missing
+values remain null; stale readings retain their value and timestamp. Indices
+report `unavailable` with an explicit reason, never a default safety judgement.
+
+`GET /history?station=2606&param=flow&from=<ISO-8601 timestamp>` returns ordered
+measurements from the requested start through the response time. The start must
+include a timezone and fall within the last 30 days. Only confirmed station and
+parameter pairs are accepted; at most 5,000 points are returned. Oversized results
+are rejected rather than silently truncated. See the [API contract](docs/api.md)
+for response fields, errors, and commands usable from PowerShell.
 
 `GET /health` returns HTTP 200 when a bounded PostgreSQL query succeeds, or HTTP
 503 when the database or ingestion schema is unavailable. `status` describes
@@ -192,9 +211,9 @@ fresh/stale/missing status for each of the six expected series. Data is fresh fo
 No source health endpoint substitutes for per-series freshness. See the detailed
 [health contract](docs/ingestion.md#health).
 
-Next milestones are `/latest` and `/history`, then the mobile dashboard.
-No current or contrast thresholds are calibrated. The MVP's 24-hour
-worker observation and `/latest` latency target remain unverified.
+The next milestone is the mobile dashboard. No current or contrast thresholds
+are calibrated. The MVP's continuous 24-hour worker observation remains pending;
+the API contract documents the scope of local response-time verification.
 
 Measurements will originate from the [Federal Office for the Environment (FOEN)](https://www.hydrodaten.admin.ch/)
 through [Existenz](https://api.existenz.ch/). The application does not replace
