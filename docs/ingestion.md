@@ -155,5 +155,7 @@ invalid and partial payloads, bounded requests, recovery after source and databa
 outages, historical backfill beyond 24 hours, and the ten-minute retry schedule.
 They do not contact Existenz or use the development database.
 
-The MVP's continuous 24-hour worker observation remains to be performed. The
-`/latest` latency target remains unverified because that route is not yet built.
+The read-only `/latest` and `/history` routes expose these stored measurements;
+see the [API contract](api.md) for validation, freshness, and bounded history.
+The MVP's continuous 24-hour worker observation remains to be performed. Local
+response-time verification does not establish public-hosting performance.

@@ -25,7 +25,7 @@ def get(path: str) -> httpx.Response:
 def test_bootstrap_links_to_api_documentation():
     response = get("/")
     assert response.status_code == 200
-    assert response.json()["stage"] == "ingestion"
+    assert response.json()["stage"] == "api"
     assert get(response.json()["docs"]).status_code == 200
 
 
