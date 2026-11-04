@@ -184,6 +184,10 @@ container images. Tool references: [Bandit](https://bandit.readthedocs.io/),
 [pip-audit](https://github.com/pypa/pip-audit), and
 [Gitleaks](https://github.com/gitleaks/gitleaks).
 
+The [measurement API threat model](docs/threat-model.md) records the assets,
+actors, trust boundaries, verified controls, and remaining risks for the local
+Compose setup. Review its deployment assumptions before exposing the API publicly.
+
 ## Measurement and health APIs
 
 `GET /latest` returns all six expected series with their latest value, UTC

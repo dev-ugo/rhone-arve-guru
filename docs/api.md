@@ -78,7 +78,7 @@ interpolation or artificial observations. Empty history returns HTTP 200 with
 
 `latest_at` is the newest point in the requested window. `status` applies the
 same 30-minute freshness criterion to that point; it describes this window, not
-all retained history. At most 5,000 points may be returned. The query reads at
+all retained history. At most 5,000 points may be returned. The query retrieves at
 most 5,001 points to detect overflow; a larger result produces HTTP 422 and the
 caller must request a shorter interval. Results are never silently truncated.
 
@@ -107,6 +107,8 @@ measurement responses do not assert that the worker is healthy.
 The API has no cross-origin middleware or public write routes. Compose binds it
 to localhost. Public hosting will need an explicit deployment review, including
 request-rate limits and the required origins; this feature does not deploy it.
+The [scoped threat model](threat-model.md) maps the affected trust boundaries,
+verified controls, and residual risks.
 
 ## Try the routes
 
