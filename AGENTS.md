@@ -75,6 +75,7 @@ Keep personal specifications, financial planning, and one-off API investigation 
 - Containers run as non-root, without `privileged` mode or extra capabilities, with no published database port. Pin image versions.
 - Do not weaken the Security workflow: no `pull_request_target`, no write permissions, no ignore rules for an active secret. When dependencies change, keep `requirements-lock.txt` complete so the audit stays valid.
 - Before the final commit of any change touching API routes, Dockerfiles, Compose files, workflows, or deployment configuration, run the `security-engineer` subagent on the diff. Report its findings and how each was handled. The subagent never edits files.
+- Relay the security-engineer report verbatim, without rewording or reformatting it.
 
 ## Indices and wording
 
