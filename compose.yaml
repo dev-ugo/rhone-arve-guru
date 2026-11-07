@@ -14,7 +14,7 @@ x-application: &application
 
 services:
   db:
-    image: postgres:17-bookworm
+    image: postgres:18-bookworm
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-rhone_arve}
       POSTGRES_USER: ${POSTGRES_USER:-rhone_arve}
