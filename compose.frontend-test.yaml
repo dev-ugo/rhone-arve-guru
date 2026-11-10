@@ -2,7 +2,7 @@ name: rhone-arve-guru-frontend-tests
 
 services:
   frontend-tests:
-    image: node:24.22.2-bookworm-slim
+    image: node:26.13.0-bookworm-slim
     user: node
     working_dir: /workspace
     network_mode: none
